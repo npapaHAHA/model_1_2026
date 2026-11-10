@@ -1,0 +1,1417 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="description" content="Численное решение одномерного уравнения Шрёдингера для потенциальной ямы и барьера.">
+  <title>Квантовая лаборатория · Моделирование 1</title>
+  <style>
+:root {
+  color-scheme: light;
+  --paper: #f4f3ee;
+  --sheet: #fcfbf7;
+  --raised: #eeede7;
+  --ink: #242b28;
+  --secondary: #4e5751;
+  --muted: #606963;
+  --rule: #cfd2c9;
+  --accent: #165f52;
+  --selection: #e2ece5;
+  --error: #84392d;
+  --body: 'Source Sans 3', 'Segoe UI', Arial, sans-serif;
+  --mono: 'IBM Plex Mono', 'Cascadia Mono', Consolas, monospace;
+  --radius: 8px;
+  --ease: cubic-bezier(.22, 1, .36, 1);
+  font-family: var(--body);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; color: var(--ink); background: var(--paper); }
+h1, h2, h3, p { margin: 0; }
+a { color: inherit; text-decoration: none; }
+button, select, input, textarea { font: inherit; color: inherit; }
+button, select, input[type=range], summary { cursor: pointer; }
+button { border: 0; }
+button, a, select, summary { transition: background-color 150ms var(--ease), color 150ms var(--ease); }
+:where(button, a, select, input, textarea, summary):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.shell { width: min(1320px, calc(100% - 64px)); margin-inline: auto; }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.quiet { color: var(--secondary); }
+
+.top { border-bottom: 1px solid var(--rule); }
+.top-inner { height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.brand { display: inline-flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 600; }
+.brand-icon { display: inline-grid; place-items: center; width: 24px; height: 24px; color: var(--accent); font: 20px/1 var(--mono); }
+.top-link { padding: 8px; margin-right: -8px; color: var(--secondary); border-radius: var(--radius); font-size: 14px; }
+.top-link:hover, .text-button:hover { background: var(--raised); color: var(--accent); }
+
+.intro { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; padding: 28px 0 24px; }
+.intro-meta { color: var(--muted); font: 12px/16px var(--mono); }
+.intro h1 { margin-top: 8px; font-size: clamp(32px, 4.05vw, 56px); line-height: 1.12; letter-spacing: -.04em; font-weight: 500; }
+.equation { padding-left: 16px; border-left: 1px solid var(--rule); color: var(--muted); font-size: 13px; line-height: 20px; }
+.schrodinger { display: block; color: var(--ink); margin-top: 4px; font: 16px/20px var(--mono); white-space: nowrap; }
+
+.experiment-nav { border-block: 1px solid var(--rule); margin-bottom: 20px; }
+.tabs { display: flex; gap: 4px; }
+.tabs button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 16px; background: transparent; box-shadow: inset 0 -2px transparent; color: var(--secondary); font-size: 14px; line-height: 20px; font-weight: 500; }
+.tabs button:hover { background: var(--raised); }
+.tabs button[aria-selected=true] { background: var(--sheet); box-shadow: inset 0 -2px var(--accent); color: var(--accent); }
+.tabs button:focus-visible { outline-offset: -4px; }
+.mode-icon { display: inline-block; width: 16px; height: 12px; border: 1.5px solid currentColor; flex: none; }
+.well-icon { border-top: 0; }
+.barrier-icon { border-bottom: 0; }
+
+.workbench { display: grid; grid-template-columns: minmax(240px, 264px) minmax(0, 1fr); align-items: start; gap: 20px; }
+.panel { min-width: 0; border: 1px solid var(--rule); border-radius: 12px; background: var(--sheet); }
+.controls { padding: 16px; }
+.panel-heading, .chart-heading, .detail-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+h2 { font-size: 20px; line-height: 24px; font-weight: 600; }
+.panel-heading { margin-bottom: 16px; }
+.text-button { padding: 8px; margin-right: -8px; border-radius: var(--radius); background: none; color: var(--secondary); font-size: 13px; line-height: 16px; }
+.source label, .custom-input label, .accuracy-body label { display: block; margin-bottom: 8px; color: var(--ink); font-size: 14px; line-height: 20px; font-weight: 500; }
+.select-wrap { position: relative; }
+.select-wrap::after { content: ''; position: absolute; top: calc(50% - 6px); right: 16px; width: 8px; height: 8px; border-bottom: 1px solid var(--secondary); border-right: 1px solid var(--secondary); transform: rotate(45deg); pointer-events: none; }
+select, .custom-input input, .custom-input textarea { width: 100%; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--sheet); }
+select { appearance: none; min-height: 40px; padding: 8px 32px 8px 12px; font-size: 14px; line-height: 20px; }
+select:hover { background: var(--raised); }
+.parameter-fields { margin-top: 16px; }
+.param + .param { margin-top: 12px; }
+.param-head { display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-bottom: 4px; }
+.param-head label { color: var(--ink); font-size: 14px; line-height: 16px; }
+.param-head label span { margin-left: 4px; color: var(--secondary); font: 12px/16px var(--mono); }
+.number-wrap { display: inline-flex; align-items: center; gap: 4px; padding-right: 8px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--sheet); color: var(--muted); white-space: nowrap; font: 11px/16px var(--mono); }
+.number-wrap input { appearance: textfield; width: 48px; padding: 4px 0 4px 4px; border: 0; border-radius: 6px; background: transparent; color: var(--ink); text-align: right; font: 13px/20px var(--mono); }
+.number-wrap input::-webkit-outer-spin-button, .number-wrap input::-webkit-inner-spin-button { appearance: none; margin: 0; }
+input[type=range] { display: block; appearance: none; width: 100%; height: 20px; margin: 0; border-radius: var(--radius); background: transparent; }
+input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 4px; background: linear-gradient(to right, var(--accent) var(--fill), var(--rule) var(--fill)); }
+input[type=range]::-moz-range-track { height: 4px; border-radius: 4px; background: linear-gradient(to right, var(--accent) var(--fill), var(--rule) var(--fill)); }
+input[type=range]::-webkit-slider-thumb { appearance: none; width: 12px; height: 12px; margin-top: -4px; border: 2px solid var(--accent); border-radius: 50%; background: var(--sheet); }
+input[type=range]::-moz-range-thumb { width: 8px; height: 8px; border: 2px solid var(--accent); border-radius: 50%; background: var(--sheet); }
+.custom-input { margin-top: 16px; }
+.custom-input input, .custom-input textarea { padding: 8px 12px; font: 13px/20px var(--mono); }
+.custom-input textarea { resize: vertical; min-height: 96px; }
+.custom-input p { margin-top: 8px; color: var(--secondary); font-size: 13px; line-height: 20px; }
+.accuracy { margin-top: 16px; border-top: 1px solid var(--rule); padding-top: 12px; }
+.accuracy summary { padding: 4px; margin: -4px; border-radius: 4px; color: var(--secondary); font-size: 13px; line-height: 20px; }
+.accuracy summary:hover { color: var(--accent); }
+.accuracy-body { padding-top: 12px; }
+
+.result { min-width: 0; }
+.primary-chart { padding: 16px 16px 0; }
+.chart-heading { align-items: flex-start; margin-bottom: 12px; }
+.chart-heading p { margin-top: 4px; font-size: 14px; line-height: 20px; }
+.view-switch { display: flex; align-items: center; gap: 4px; flex: none; padding: 4px; border: 1px solid var(--rule); border-radius: var(--radius); }
+.view-switch button { padding: 4px 8px; border-radius: 4px; background: transparent; color: var(--secondary); font-size: 13px; line-height: 20px; white-space: nowrap; }
+.view-switch button:hover { background: var(--raised); }
+.view-switch button[aria-pressed=true] { background: var(--selection); color: var(--accent); font-weight: 500; }
+.chart-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 16px; min-height: 20px; margin-bottom: 8px; color: var(--secondary); font-size: 12px; line-height: 16px; }
+.legend-item { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.legend-item i { display: inline-block; width: 16px; border-top: 2px solid var(--legend); }
+.legend-item.dashed i { border-top-style: dashed; }
+.plot-wrap { position: relative; }
+canvas { display: block; }
+#main-plot, #profile-plot { width: 100%; height: 344px; background: var(--sheet); border-block: 1px solid var(--rule); }
+#profile-plot { height: 216px; }
+.plot-message { position: absolute; inset: 1px 0; display: grid; place-items: center; padding: 24px; background: var(--sheet); color: var(--error); text-align: center; font-size: 14px; line-height: 20px; }
+.tooltip { position: absolute; pointer-events: none; z-index: 1; min-width: 112px; padding: 8px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--sheet); color: var(--ink); font: 12px/20px var(--mono); white-space: pre-line; }
+.chart-foot { min-height: 40px; padding: 8px 0 12px; color: var(--secondary); font-size: 12px; line-height: 20px; }
+
+.result-detail { margin-top: 20px; }
+.detail-heading { align-items: baseline; margin-bottom: 8px; }
+.detail-heading h2, .profile-chart h2 { font-size: 17px; }
+.detail-heading .quiet { font-size: 12px; }
+.state-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); max-height: 224px; overflow: auto; border-top: 1px solid var(--rule); }
+.state { display: grid; grid-template-columns: auto 1fr; align-items: baseline; gap: 4px 8px; min-width: 0; padding: 8px 12px 12px; border-inline-end: 1px solid var(--rule); border-bottom: 1px solid var(--rule); border-radius: 0; background: transparent; color: var(--ink); text-align: left; }
+.state:hover { background: var(--raised); }
+.state[aria-pressed=true] { background: var(--selection); box-shadow: inset 0 -2px var(--state); }
+.state:focus-visible { outline-offset: -3px; }
+.state span { grid-column: 1 / -1; display: inline-flex; align-items: center; gap: 8px; color: var(--secondary); font: 12px/16px var(--mono); }
+.state span::before { display: block; width: 12px; height: 2px; background: var(--state); content: ''; }
+.state strong { font: 500 15px/20px var(--mono); }
+.state small { color: var(--muted); font-size: 12px; }
+
+.metrics { display: grid; grid-template-columns: 1.25fr 1fr 1fr; border-block: 1px solid var(--rule); }
+.metric { min-width: 0; padding: 12px 16px; }
+.metric + .metric { border-left: 1px solid var(--rule); }
+.metric div { margin-bottom: 4px; color: var(--secondary); font-size: 13px; line-height: 16px; }
+.metric strong { overflow-wrap: anywhere; font: 500 clamp(15px, 2vw, 24px)/1.25 var(--mono); }
+.metric:first-child strong { color: var(--accent); }
+.profile-chart { margin-top: 20px; padding: 16px; }
+
+.method { margin-top: 32px; padding: 24px 0; border-top: 1px solid var(--rule); scroll-margin-top: 16px; }
+.method h2 { margin-bottom: 16px; }
+.method-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.method article + article { padding-left: 24px; border-left: 1px solid var(--rule); }
+.method h3 { font-size: 16px; line-height: 20px; font-weight: 600; }
+.method p { margin-top: 8px; color: var(--secondary); font-size: 14px; line-height: 22px; max-width: 64ch; }
+.footer { display: flex; justify-content: space-between; gap: 8px 16px; border-top: 1px solid var(--rule); padding: 16px 0 24px; color: var(--muted); font-size: 12px; line-height: 16px; }
+.no-script { position: fixed; inset: auto 16px 16px; z-index: 2; padding: 12px; border: 1px solid var(--accent); border-radius: var(--radius); background: var(--sheet); text-align: center; }
+
+@media (max-width: 1060px) {
+  .shell { width: calc(100% - 48px); }
+  .workbench { grid-template-columns: 240px minmax(0, 1fr); gap: 16px; }
+  .chart-heading { flex-wrap: wrap; gap: 8px; }
+}
+
+@media (max-width: 760px) {
+  .shell { width: calc(100% - 32px); }
+  .top-inner { height: 48px; }
+  .intro { align-items: start; flex-direction: column; gap: 8px; padding: 16px 0; }
+  .intro h1 { margin-top: 4px; letter-spacing: -.025em; }
+  .equation { display: flex; align-items: baseline; gap: 4px 12px; flex-wrap: wrap; padding: 0; border: 0; }
+  .equation span:first-child { font-size: 12px; }
+  .schrodinger { margin: 0; font-size: 13px; }
+  .experiment-nav { margin-bottom: 12px; }
+  .workbench { grid-template-columns: 1fr; gap: 12px; }
+  .panel-heading { margin-bottom: 8px; }
+  .parameter-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; margin-top: 12px; }
+  .param + .param { margin-top: 0; }
+  .accuracy { margin-top: 8px; padding-top: 8px; }
+  #main-plot { height: 300px; }
+}
+
+@media (max-width: 480px) {
+  .shell { width: calc(100% - 24px); }
+  .brand { font-size: 14px; gap: 4px; }
+  .brand-icon { width: 16px; font-size: 16px; }
+  .intro-meta { font-size: 11px; }
+  .intro h1 { font-size: clamp(26px, 8vw, 36px); }
+  .tabs button { flex: 1; min-width: 0; justify-content: start; padding: 8px 4px; gap: 4px; text-align: left; font-size: 13px; }
+  .tabs .mode-icon { width: 12px; height: 8px; }
+  .controls, .profile-chart { padding: 12px; }
+  .primary-chart { padding: 12px 8px 0; }
+  .primary-chart .chart-heading, .primary-chart .chart-legend, .chart-foot { margin-inline: 4px; }
+  h2 { font-size: 18px; }
+  .chart-heading p { font-size: 13px; line-height: 16px; }
+  .chart-legend { column-gap: 12px; }
+  .parameter-fields { column-gap: 8px; }
+  .param-head label, .param-head label span { font-size: 12px; }
+  .number-wrap { gap: 2px; padding-right: 4px; }
+  .number-wrap input { width: 36px; font-size: 12px; }
+  #main-plot { height: 288px; }
+  #profile-plot { height: 200px; }
+  .state-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .state { padding: 8px; gap: 4px; }
+  .state strong { font-size: 13px; }
+  .metric { padding: 8px; }
+  .metric div { font-size: 12px; }
+  .method-grid { grid-template-columns: 1fr; gap: 16px; }
+  .method article + article { padding: 16px 0 0; border: 0; border-top: 1px solid var(--rule); }
+  .footer { flex-wrap: wrap; }
+}
+
+@media (max-width: 360px) {
+  .metric strong { font-size: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; }
+}
+
+</style>
+</head>
+<body>
+  <header class="top">
+    <div class="shell top-inner">
+      <a class="brand" href="#top"><span class="brand-icon" aria-hidden="true">ψ</span>Квантовая лаборатория</a>
+      <a class="top-link" href="#method">Методика</a>
+    </div>
+  </header>
+  <main class="shell" id="top">
+    <section class="intro" aria-labelledby="main-title">
+      <div>
+        <p class="intro-meta">Компьютерное моделирование · Модуль 1</p>
+        <h1 id="main-title">Частица в потенциале</h1>
+      </div>
+      <div class="equation">
+        <span>Стационарное уравнение Шрёдингера</span>
+        <span class="schrodinger">−(ℏ² / 2m)ψ″ + Uψ = Eψ</span>
+      </div>
+    </section>
+
+    <div class="experiment-nav">
+      <div class="tabs" role="tablist" aria-label="Задача моделирования">
+        <button type="button" role="tab" id="tab-well" aria-selected="true" aria-controls="experiment" data-mode="well"><span class="mode-icon well-icon" aria-hidden="true"></span>Потенциальная яма</button>
+        <button type="button" role="tab" id="tab-barrier" aria-selected="false" aria-controls="experiment" tabindex="-1" data-mode="barrier"><span class="mode-icon barrier-icon" aria-hidden="true"></span>Потенциальный барьер</button>
+      </div>
+    </div>
+
+    <div id="experiment" role="tabpanel" aria-labelledby="tab-well" class="workbench">
+      <aside class="panel controls" aria-labelledby="parameters-title">
+        <div class="panel-heading">
+          <h2 id="parameters-title">Параметры</h2>
+          <button type="button" id="reset" class="text-button">Сбросить</button>
+        </div>
+        <div class="source">
+          <label for="potential">Профиль U(x)</label>
+          <div class="select-wrap"><select id="potential"></select></div>
+        </div>
+        <div id="profile-fields"></div>
+        <div id="parameter-fields" class="parameter-fields"></div>
+        <details class="accuracy">
+          <summary>Настройки сетки</summary>
+          <div class="accuracy-body">
+            <label for="steps">Число интервалов</label>
+            <div class="select-wrap"><select id="steps"></select></div>
+          </div>
+        </details>
+      </aside>
+
+      <section class="result" aria-label="Результаты моделирования">
+        <div class="panel primary-chart">
+          <div class="chart-heading">
+            <div>
+              <h2 id="chart-title"></h2>
+              <p id="chart-subtitle" class="quiet"></p>
+            </div>
+            <div class="view-switch" id="chart-options" role="group" aria-label="Вид графика"></div>
+          </div>
+          <div class="chart-legend" id="chart-legend"></div>
+          <div class="plot-wrap">
+            <canvas id="main-plot" role="img" aria-label="График результатов"></canvas>
+            <div id="plot-tooltip" class="tooltip" hidden></div>
+            <div id="plot-message" class="plot-message" role="status" hidden></div>
+          </div>
+          <div class="chart-foot" id="chart-foot"></div>
+        </div>
+        <div class="result-detail" id="well-detail">
+          <div class="detail-heading"><h2>Уровни энергии</h2><span id="well-count" class="quiet mono" aria-live="polite"></span></div>
+          <div id="state-cards" class="state-cards"></div>
+        </div>
+        <div class="result-detail" id="barrier-detail" hidden>
+          <div class="metrics">
+            <div class="metric"><div>Прохождение T</div><strong id="transmission">—</strong></div>
+            <div class="metric"><div>Отражение R</div><strong id="reflection">—</strong></div>
+            <div class="metric"><div>Энергия E</div><strong id="current-energy">—</strong></div>
+          </div>
+          <div class="panel profile-chart">
+            <div class="chart-heading"><h2>Профиль барьера</h2></div>
+            <div class="chart-legend" id="profile-legend"></div>
+            <canvas id="profile-plot" role="img" aria-label="График потенциальной энергии и энергии частицы"></canvas>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section class="method" id="method" aria-labelledby="method-title">
+      <h2 id="method-title">Методика расчёта</h2>
+      <div class="method-grid">
+        <article><h3>Связанные состояния</h3><p>Уравнение Шрёдингера решается на равномерной сетке. За пределами ямы потенциал постоянен и равен U<sub>внеш</sub>. Условие затухания на обеих сторонах даёт уровни E<sub>n</sub> &lt; U<sub>внеш</sub> и нормированные функции ψ<sub>n</sub>(x).</p></article>
+        <article><h3>Рассеяние на барьере</h3><p>Вне барьера U = 0. Внутри U(x) приближается постоянными значениями на коротких участках. Стыковка решений даёт T(E) и R(E) для волны, падающей слева.</p></article>
+      </div>
+    </section>
+  </main>
+  <footer class="shell footer"><span>Единицы расчёта</span><span class="mono">Длина в нм · Энергия в эВ · Масса в mₑ</span></footer>
+  <noscript><div class="no-script">Для численного расчёта включите JavaScript в браузере.</div></noscript>
+  <script>
+(function (root) {
+  'use strict';
+
+  // ℏ² / (2 mₑ), in eV·nm². Masses are given in units of mₑ.
+  const ELECTRON_KINETIC = 0.0380998212;
+  const functions = {
+    abs: Math.abs, sin: Math.sin, cos: Math.cos, tan: Math.tan,
+    exp: Math.exp, log: Math.log, ln: Math.log, sqrt: Math.sqrt,
+    floor: Math.floor, ceil: Math.ceil, min: Math.min, max: Math.max,
+    pow: Math.pow, step: (x) => Number(x >= 0),
+  };
+  const variables = new Set(['x', 'a', 'h', 'l', 'u0', 'pi', 'e']);
+
+  function compileExpression(expression) {
+    const source = String(expression ?? '').trim().toLowerCase()
+      .replaceAll('π', 'pi').replaceAll('−', '-').replaceAll('×', '*')
+      .replaceAll('÷', '/').replaceAll('**', '^').replace(/\s/g, '');
+    if (!source || source.length > 500) {
+      throw new Error('Введите формулу длиной от 1 до 500 символов.');
+    }
+    const tokens = source.match(/(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?|[a-z][a-z0-9]*|<=|>=|==|!=|[+\-*/^(),<>?:]/g);
+    if (!tokens || tokens.join('') !== source) {
+      throw new Error('В формуле есть неизвестный символ. Дробные числа записываются через точку.');
+    }
+    let cursor = 0;
+    const take = (token) => {
+      if (tokens[cursor] !== token) return false;
+      cursor++;
+      return true;
+    };
+    function expect(token) {
+      if (!take(token)) throw new Error(`В формуле ожидался символ «${token}».`);
+    }
+
+    function atom() {
+      if (take('(')) {
+        const value = conditional();
+        expect(')');
+        return value;
+      }
+      const token = tokens[cursor++];
+      if (token && /^\d|^\./.test(token)) return () => Number(token);
+      if (variables.has(token)) return (context) => context[token];
+      if (token && Object.hasOwn(functions, token)) {
+        const fn = functions[token];
+        expect('(');
+        const args = [conditional()];
+        while (take(',')) args.push(conditional());
+        expect(')');
+        if (token !== 'min' && token !== 'max' && args.length !== fn.length) {
+          throw new Error(`Проверьте число аргументов функции ${token}.`);
+        }
+        return (context) => fn(...args.map((arg) => arg(context)));
+      }
+      throw new Error(token ? `Неизвестное имя или знак «${token}».` : 'Формула обрывается.');
+    }
+
+    function unary() {
+      if (take('+')) return unary();
+      if (take('-')) {
+        const next = unary();
+        return (context) => -next(context);
+      }
+      const base = atom();
+      if (!take('^')) return base;
+      const exponent = unary();
+      return (context) => base(context) ** exponent(context);
+    }
+
+    function binary(next, operators) {
+      let result = next();
+      while (Object.hasOwn(operators, tokens[cursor])) {
+        const operation = operators[tokens[cursor++]];
+        const left = result;
+        const right = next();
+        result = (context) => operation(left(context), right(context));
+      }
+      return result;
+    }
+
+    const products = { '*': (a, b) => a * b, '/': (a, b) => a / b };
+    const sums = { '+': (a, b) => a + b, '-': (a, b) => a - b };
+    const comparisons = {
+      '<': (a, b) => Number(a < b), '>': (a, b) => Number(a > b),
+      '<=': (a, b) => Number(a <= b), '>=': (a, b) => Number(a >= b),
+      '==': (a, b) => Number(a === b), '!=': (a, b) => Number(a !== b),
+    };
+    const product = () => binary(unary, products);
+    const sum = () => binary(product, sums);
+
+    function conditional() {
+      const condition = binary(sum, comparisons);
+      if (!take('?')) return condition;
+      const yes = conditional();
+      expect(':');
+      const no = conditional();
+      return (context) => condition(context) ? yes(context) : no(context);
+    }
+
+    const evaluate = conditional();
+    if (cursor !== tokens.length) {
+      throw new Error(`Проверьте формулу рядом с «${tokens[cursor]}». Умножение обозначается знаком *.`);
+    }
+    return evaluate;
+  }
+
+  function parseTable(table, width, barrier) {
+    const rows = [];
+    const source = String(table ?? '');
+    if (source.length > 400000) throw new Error('Таблица слишком длинная.');
+    for (const [line, raw] of source.split(/\r?\n/).entries()) {
+      const value = raw.split('#')[0].trim();
+      if (!value) continue;
+      if (!rows.length && /^[xх]\s*[;,\s]\s*u(?:\(x\))?$/i.test(value)) continue;
+      const fields = value.includes(';') ? value.split(';') : value.includes('\t')
+        ? value.split('\t') : value.includes(',') && !/\d\s+[-+]?\d/.test(value)
+          ? value.split(',') : value.split(/\s+/);
+      const numbers = fields.map((field) => {
+        const clean = field.trim().replace(',', '.').replace('−', '-');
+        return /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(clean) ? Number(clean) : NaN;
+      });
+      if (numbers.length !== 2 || !numbers.every(Number.isFinite)) {
+        throw new Error(`Строка ${line + 1} таблицы должна содержать два числа: x и U.`);
+      }
+      if (rows.length && numbers[0] <= rows.at(-1)[0]) {
+        throw new Error(`Координаты x должны возрастать. Проверьте строку ${line + 1}.`);
+      }
+      if (barrier && numbers[1] <= 0) {
+        throw new Error(`Для барьера U(x) должно быть больше нуля. Проверьте строку ${line + 1}.`);
+      }
+      rows.push(numbers);
+    }
+    const tolerance = 1e-8 * width;
+    if (rows.length < 2 || Math.abs(rows[0][0]) > tolerance || Math.abs(rows.at(-1)[0] - width) > tolerance) {
+      throw new Error('Задайте не менее двух точек таблицы, от x = 0 до выбранной ширины.');
+    }
+    if (rows.length > 2 && (rows[1][0] <= 0 || rows.at(-2)[0] >= width)) {
+      throw new Error('Промежуточные координаты таблицы должны быть внутри выбранной области.');
+    }
+    rows[0][0] = 0;
+    rows.at(-1)[0] = width;
+    const value = (x) => {
+      if (x <= rows[0][0]) return rows[0][1];
+      if (x >= rows.at(-1)[0]) return rows.at(-1)[1];
+      let lo = 0;
+      let hi = rows.length - 1;
+      while (hi - lo > 1) {
+        const mid = (hi + lo) >> 1;
+        if (rows[mid][0] <= x) lo = mid;
+        else hi = mid;
+      }
+      const [x0, u0] = rows[lo];
+      const [x1, u1] = rows[hi];
+      return u0 + (u1 - u0) * (x - x0) / (x1 - x0);
+    };
+    return { value, samples: rows.map(([x, value]) => ({ x, value })) };
+  }
+
+  function positive(value, label) {
+    if (!(Number.isFinite(value) && value > 0)) throw new Error(`Задайте положительное значение параметра «${label}».`);
+  }
+
+  function gaussian(s, center, sigma) {
+    return Math.exp(-0.5 * ((s - center) / sigma) ** 2);
+  }
+
+  function makePotential({ kind, preset, width, height = 1, expression, table }) {
+    positive(width, 'Ширина');
+    const barrier = kind === 'barrier';
+    if (!Number.isFinite(height) || height < 0) throw new Error('Высота должна быть неотрицательным числом.');
+    if (preset === 'table') return parseTable(table, width, barrier);
+    let profile;
+    if (preset === 'expression') {
+      const evaluate = compileExpression(expression);
+      const constants = { a: width, h: width, l: width, u0: height, pi: Math.PI, e: Math.E };
+      profile = (x) => evaluate({ ...constants, x });
+    } else {
+      const profiles = {
+        rectangular: () => barrier ? height : 0,
+        parabolic: (s) => height * (2 * s - 1) ** 2,
+        asymmetric: (s) => height * (0.65 * (2 * s - 1) ** 2 + 0.35 * s),
+        gaussian: (s) => height * gaussian(s, 0.5, 0.21),
+        triangular: (s) => height * (0.12 + 0.88 * (1 - Math.abs(2 * s - 1))),
+        double: barrier
+          ? (s) => height * (0.12 + 0.88 * (gaussian(s, 0.25, 0.11) + gaussian(s, 0.75, 0.11)))
+          : (s) => height * (1 - 4 * (2 * s - 1) ** 2) ** 2 / 9,
+      };
+      if (!Object.hasOwn(profiles, preset)) throw new Error('Неизвестный профиль потенциала.');
+      profile = (x) => profiles[preset](x / width);
+    }
+    const value = (x) => checkedValue(profile, x, barrier);
+    const samples = Array.from({ length: 121 }, (_, i) => {
+      const x = width * i / 120;
+      return { x, value: value(x) };
+    });
+    return { value, samples };
+  }
+
+  function checkedValue(profile, x, barrier) {
+    const value = profile(x);
+    if (!Number.isFinite(value)) throw new Error(`Потенциал не определён при x = ${x.toFixed(4)} нм.`);
+    if (barrier && value <= 0) {
+      throw new Error(`Для барьера U(x) должно быть больше нуля. Проверьте x = ${x.toFixed(4)} нм.`);
+    }
+    return value;
+  }
+
+  function sampleMidpoints(width, potential, steps, barrier) {
+    if (!Number.isInteger(steps) || steps < 2 || steps > 5000) throw new Error('Число шагов должно быть от 2 до 5000.');
+    const profile = typeof potential === 'function' ? potential : potential?.value;
+    if (typeof profile !== 'function') throw new Error('Задайте функцию потенциала.');
+    return Float64Array.from({ length: steps }, (_, i) => checkedValue(profile, (i + 0.5) * width / steps, barrier));
+  }
+
+  function solveWell({ width, mass, exterior, potential, steps = 600, maxStates = 8 }) {
+    positive(width, 'Ширина');
+    positive(mass, 'Масса');
+    if (!Number.isFinite(exterior)) throw new Error('Задайте конечное значение внешнего потенциала.');
+    const values = sampleMidpoints(width, potential, steps, false);
+    const dx = width / steps;
+    const c = ELECTRON_KINETIC / mass;
+    const kinetic = c / dx ** 2;
+    const alphaAt = (energy) => 2 * Math.asinh(dx * Math.sqrt(Math.max(0, exterior - energy) / c) / 2);
+    const edgeAt = (energy) => kinetic * (1 - Math.expm1(-alphaAt(energy)));
+    const tiny = kinetic * 1e-15;
+
+    function sturmCount(energy) {
+      const edge = edgeAt(energy);
+      let pivot = edge + values[0] - energy;
+      let count = Number(pivot < 0);
+      for (let i = 1; i < steps; i++) {
+        if (Math.abs(pivot) < tiny) pivot = pivot < 0 ? -tiny : tiny;
+        const diagonal = i === steps - 1 ? edge : 2 * kinetic;
+        pivot = diagonal + values[i] - energy - kinetic * (kinetic / pivot);
+        count += Number(pivot < 0);
+      }
+      return count;
+    }
+
+    const lowestPotential = Math.min(...values);
+    const tolerance = Math.max(Math.max(Math.abs(exterior), 1) * 2e-13, kinetic * 2e-14);
+    const upper = exterior - tolerance;
+    const totalStates = lowestPotential >= exterior ? 0 : sturmCount(upper);
+    const numberShown = Math.min(totalStates, Math.max(0, Math.trunc(maxStates)));
+    const energies = [];
+    for (let index = 0; index < numberShown; index++) {
+      let lo = lowestPotential;
+      let hi = upper;
+      while (hi - lo > tolerance) {
+        const mid = lo + (hi - lo) / 2;
+        if (mid === lo || mid === hi) break;
+        if (sturmCount(mid) > index) hi = mid;
+        else lo = mid;
+      }
+      energies.push((lo + hi) / 2);
+    }
+
+    function interiorState(energy, index, earlierStates) {
+      const edge = edgeAt(energy);
+      const shift = Math.max(tolerance * 12, 2e-10 * Math.max(1, Math.abs(energy)));
+      const pivots = new Float64Array(steps);
+      const factors = new Float64Array(steps);
+      pivots[0] = edge + values[0] - energy + shift;
+      for (let i = 1; i < steps; i++) {
+        let pivot = pivots[i - 1];
+        if (Math.abs(pivot) < tiny) pivot = pivot < 0 ? -tiny : tiny;
+        pivots[i - 1] = pivot;
+        factors[i] = -kinetic / pivot;
+        const diagonal = i === steps - 1 ? edge : 2 * kinetic;
+        pivots[i] = diagonal + values[i] - energy + shift + kinetic * factors[i];
+      }
+      if (Math.abs(pivots.at(-1)) < tiny) pivots[steps - 1] = pivots.at(-1) < 0 ? -tiny : tiny;
+
+      const vector = Float64Array.from({ length: steps }, (_, i) => (
+        Math.sin((index + 1) * Math.PI * (i + 0.5) / steps) + 0.15 * Math.cos(17.49 * (i + 1))
+      ));
+      const nearby = earlierStates.filter((state) => Math.abs(state.energy - energy) < 100 * shift);
+      for (let iteration = 0; iteration < 5; iteration++) {
+        for (let i = 1; i < steps; i++) vector[i] -= factors[i] * vector[i - 1];
+        vector[steps - 1] /= pivots[steps - 1];
+        for (let i = steps - 2; i >= 0; i--) vector[i] = (vector[i] + kinetic * vector[i + 1]) / pivots[i];
+        for (const { vector: previous } of nearby) {
+          let overlap = 0;
+          let norm = 0;
+          for (let i = 0; i < steps; i++) {
+            overlap += vector[i] * previous[i];
+            norm += previous[i] ** 2;
+          }
+          for (let i = 0; i < steps; i++) vector[i] -= previous[i] * overlap / norm;
+        }
+        const scale = Math.max(Math.abs(Math.min(...vector)), Math.max(...vector));
+        for (let i = 0; i < steps; i++) vector[i] /= scale;
+      }
+
+      const alpha = alphaAt(energy);
+      const tailWeight = Math.exp(-2 * alpha) / -Math.expm1(-2 * alpha);
+      const norm = Math.sqrt(dx * (vector.reduce((sum, value) => sum + value ** 2, 0)
+        + tailWeight * (vector[0] ** 2 + vector.at(-1) ** 2)));
+      const orientation = Math.abs(Math.min(...vector)) > Math.max(...vector) ? -1 : 1;
+      for (let i = 0; i < steps; i++) vector[i] *= orientation / norm;
+      return { energy, vector, alpha };
+    }
+
+    const statesInternal = [];
+    energies.forEach((energy, i) => statesInternal.push(interiorState(energy, i, statesInternal)));
+    const tailPoints = Math.min(100, Math.max(24, Math.round(steps * 0.25)));
+    const pad = width * 0.30;
+    const x = Float64Array.from({ length: steps + 2 * tailPoints }, (_, i) => {
+      if (i < tailPoints) return -pad + pad * i / (tailPoints - 1);
+      if (i >= steps + tailPoints) return width + pad * (i - steps - tailPoints) / (tailPoints - 1);
+      return (i - tailPoints + 0.5) * dx;
+    });
+    const profile = Float64Array.from(x, (_, i) => i >= tailPoints && i < steps + tailPoints
+      ? values[i - tailPoints] : exterior);
+    const states = statesInternal.map(({ energy, vector, alpha }, i) => ({
+      index: i + 1,
+      energy,
+      decayLength: dx / alpha,
+      psi: Float64Array.from(x, (position, k) => {
+        if (k < tailPoints) return vector[0] * Math.exp(alpha * (position / dx - 0.5));
+        if (k >= steps + tailPoints) return vector.at(-1) * Math.exp(-alpha * ((position - width) / dx + 0.5));
+        return vector[k - tailPoints];
+      }),
+    }));
+    return { states, totalStates, x, potential: profile, dx };
+  }
+
+  function sliceScattering(value, energy, c, k, dx) {
+    const delta = (value - energy) / c;
+    const q = Math.sqrt(Math.abs(delta));
+    const z = q * dx;
+    let diagonal;
+    let integral;
+    let scale = 0;
+    if (z < 1e-5) {
+      diagonal = 1 + delta * dx ** 2 / 2;
+      integral = dx * (1 + delta * dx ** 2 / 6);
+    } else if (delta < 0) {
+      diagonal = Math.cos(z);
+      integral = Math.sin(z) / q;
+    } else if (z < 40) {
+      diagonal = Math.cosh(z);
+      integral = Math.sinh(z) / q;
+    } else {
+      scale = z;
+      const correction = Math.exp(-2 * z);
+      diagonal = (1 + correction) / 2;
+      integral = (1 - correction) / (2 * q);
+    }
+    const upper = k * integral;
+    const lower = delta / k * integral;
+    const real = 2 * diagonal;
+    const imaginary = lower - upper;
+    const magnitude = Math.hypot(real, imaginary);
+    const logT = 2 * (Math.log(2 / magnitude) - scale);
+    const unitReal = real / magnitude;
+    const unitImaginary = imaginary / magnitude;
+    const reflection = -(upper + lower) / magnitude;
+    return {
+      rRe: reflection * unitImaginary,
+      rIm: reflection * unitReal,
+      tRe: (2 / magnitude) * unitReal * Math.exp(-scale),
+      tIm: -(2 / magnitude) * unitImaginary * Math.exp(-scale),
+      logT,
+    };
+  }
+
+  function scatterSlices(values, dx, c, energy) {
+    const k = Math.sqrt(energy / c);
+    let rRe = 0;
+    let rIm = 0;
+    let logT = 0;
+    for (const value of values) {
+      const slice = sliceScattering(value, energy, c, k, dx);
+      // The denominator resums reflections between the assembled left part and this slice.
+      const dRe = 1 - rRe * slice.rRe + rIm * slice.rIm;
+      const dIm = -(rRe * slice.rIm + rIm * slice.rRe);
+      const magnitude = Math.max(Number.MIN_VALUE, Math.hypot(dRe, dIm));
+      logT += slice.logT - 2 * Math.log(magnitude);
+      const normRe = dRe / magnitude;
+      const normIm = dIm / magnitude;
+      const tSquaredRe = slice.tRe ** 2 - slice.tIm ** 2;
+      const tSquaredIm = 2 * slice.tRe * slice.tIm;
+      const numeratorRe = tSquaredRe * rRe - tSquaredIm * rIm;
+      const numeratorIm = tSquaredRe * rIm + tSquaredIm * rRe;
+      rRe = slice.rRe + (numeratorRe * normRe + numeratorIm * normIm) / magnitude;
+      rIm = slice.rIm + (numeratorIm * normRe - numeratorRe * normIm) / magnitude;
+      const rMagnitude = Math.hypot(rRe, rIm);
+      if (rMagnitude > 1) {
+        rRe /= rMagnitude;
+        rIm /= rMagnitude;
+      }
+    }
+    const logTransmission = Math.min(0, logT);
+    return { transmission: Math.exp(logTransmission), reflection: -Math.expm1(logTransmission), logTransmission };
+  }
+
+  function solveBarrier({ width, mass, energy, potential, steps = 280 }) {
+    positive(width, 'Ширина');
+    positive(mass, 'Масса');
+    positive(energy, 'Энергия');
+    const values = sampleMidpoints(width, potential, steps, true);
+    return scatterSlices(values, width / steps, ELECTRON_KINETIC / mass, energy);
+  }
+
+  function barrierCurve({ width, mass, potential, steps = 280, energyMax, points = 140 }) {
+    positive(width, 'Ширина');
+    positive(mass, 'Масса');
+    positive(energyMax, 'Максимальная энергия');
+    if (!Number.isInteger(points) || points < 2 || points > 1000) throw new Error('Число точек должно быть от 2 до 1000.');
+    const values = sampleMidpoints(width, potential, steps, true);
+    const dx = width / steps;
+    const c = ELECTRON_KINETIC / mass;
+    return Array.from({ length: points }, (_, i) => {
+      const energy = energyMax * i / (points - 1);
+      const coefficients = i ? scatterSlices(values, dx, c, energy)
+        : { transmission: 0, reflection: 1, logTransmission: -Infinity };
+      return { energy, ...coefficients };
+    });
+  }
+
+  function rectangularTransmission({ width, mass, energy, height }) {
+    positive(width, 'Ширина');
+    positive(mass, 'Масса');
+    positive(energy, 'Энергия');
+    if (!Number.isFinite(height) || height < 0) throw new Error('Высота должна быть неотрицательным числом.');
+    if (height === 0) return 1;
+    const c = ELECTRON_KINETIC / mass;
+    const z = width * Math.sqrt(Math.abs(height - energy) / c);
+    let logShape = 0;
+    if (z >= 1e-6) {
+      if (energy > height) logShape = Math.log(Math.abs(Math.sin(z)) / z);
+      else if (z < 40) logShape = Math.log(Math.sinh(z) / z);
+      else logShape = z - Math.log(2 * z) + Math.log1p(-Math.exp(-2 * z));
+    }
+    const logTerm = 2 * (Math.log(height) + Math.log(width) + logShape) - Math.log(4 * energy * c);
+    return logTerm > 40 ? Math.exp(-logTerm) : 1 / (1 + Math.exp(logTerm));
+  }
+
+  const api = { ELECTRON_KINETIC, makePotential, solveWell, solveBarrier, barrierCurve, rectangularTransmission };
+  root.QuantumPhysics = api;
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+}(globalThis));
+
+</script>
+  <script>
+(() => {
+  'use strict';
+
+  const physics = globalThis.QuantumPhysics;
+  const byId = (id) => document.getElementById(id);
+  const create = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+  const mainPlot = byId('main-plot');
+  const profilePlot = byId('profile-plot');
+  const tooltip = byId('plot-tooltip');
+  const modeTabs = [...document.querySelectorAll('[data-mode]')];
+  const palette = ['#12665a', '#3b6390', '#9f4b30', '#705a81', '#52682f', '#a24c6e'];
+  const colors = {
+    potential: '#544b3f', limit: '#6a746c', passage: '#12665a', energy: '#9f4b30',
+    grid: '#dedfd7', text: '#535f57', zero: '#879087', sheet: '#fcfbf7',
+  };
+  const mono = '"IBM Plex Mono", "Cascadia Mono", Consolas, monospace';
+  const locale = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 5 });
+  const fixed = (value, digits) => value.toFixed(digits).replace('.', ',').replace('-', '−');
+  const number = (value) => locale.format(value).replace('-', '−');
+  const percent = (value, logValue = Math.log(value)) => {
+    if (value >= .00001 || !Number.isFinite(logValue)) return `${number(value * 100)} %`;
+    const logPercent = logValue / Math.LN10 + 2;
+    const exponent = Math.floor(logPercent);
+    return `${fixed(10 ** (logPercent - exponent), 2)}·10^${exponent} %`;
+  };
+
+  const defaults = {
+    well: { preset: 'asymmetric', width: 2.4, mass: 1, exterior: 1.6, height: 1.25, steps: 600,
+      expression: '0.9*(2*x/a-1)^2', view: 'spectrum' },
+    barrier: { preset: 'gaussian', width: 1.2, mass: 1, energy: .45, height: .8, steps: 280,
+      expression: '0.04+u0*exp(-((x/h-0.5)/0.3)^2)', view: 'linear' },
+  };
+  const presets = {
+    well: [['asymmetric', 'Асимметричная'], ['rectangular', 'Прямоугольная'], ['parabolic', 'Параболическая'], ['double', 'Двойная яма']],
+    barrier: [['gaussian', 'Гауссов'], ['rectangular', 'Прямоугольный'], ['triangular', 'Треугольный'], ['double', 'Двойной барьер']],
+  };
+  const options = {
+    well: [['spectrum', 'Спектр'], ['wave', 'ψ(x)']],
+    barrier: [['linear', 'Линейная'], ['log', 'Логарифм']],
+  };
+  const parameters = {
+    width: { min: .25, max: 6, step: .01, unit: 'нм' },
+    mass: { name: 'Масса', symbol: 'm', min: .1, max: 5, step: .01, unit: 'mₑ' },
+    height: { name: 'Масштаб', symbol: 'U₀', min: .05, max: 5, step: .01, unit: 'эВ' },
+    exterior: { name: 'Порог', symbol: 'Uвнеш', min: .05, max: 5, step: .01, unit: 'эВ' },
+    energy: { name: 'Энергия', symbol: 'E', min: .01, max: 8, step: .01, unit: 'эВ' },
+  };
+  const config = { well: { ...defaults.well }, barrier: { ...defaults.barrier } };
+  let mode = 'well';
+  let result;
+  let selected = null;
+  let barrierCache;
+  let timer;
+  let hover;
+  let activeAxes;
+
+  const current = () => config[mode];
+  const stateColor = (index) => palette[(index - 1) % palette.length];
+  const subscript = (index) => String(index).replace(/\d/g, (digit) => '₀₁₂₃₄₅₆₇₈₉'[digit]);
+  const isWell = () => mode === 'well';
+  const formatStates = (count) => {
+    const last = count % 10;
+    const teen = count % 100 >= 11 && count % 100 <= 14;
+    return `${count} ${!teen && last === 1 ? 'состояние' : !teen && last >= 2 && last <= 4 ? 'состояния' : 'состояний'}`;
+  };
+
+  function sampleTable(width) {
+    const middle = isWell() ? '0.12' : '0.8';
+    const edge = isWell() ? '0.9' : '0.12';
+    return `x;U\n0;${edge}\n${width / 2};${middle}\n${width};${edge}`;
+  }
+
+  function renderProfileField() {
+    const field = byId('profile-fields');
+    field.replaceChildren();
+    const { preset, width, expression, table } = current();
+    if (preset !== 'expression' && preset !== 'table') return;
+    const formula = preset === 'expression';
+    const name = formula ? 'expression' : 'table';
+    const wrapper = create('div', 'custom-input');
+    const label = create('label', '', formula ? 'Формула U(x)' : 'Таблица x;U');
+    label.htmlFor = name;
+    const input = create(formula ? 'input' : 'textarea');
+    input.id = name;
+    input.spellcheck = false;
+    input.setAttribute('aria-describedby', 'profile-hint');
+    if (!formula) input.rows = 4;
+    input.value = formula ? expression : (table ?? sampleTable(width));
+    const widthName = isWell() ? 'a' : 'h';
+    const hint = create('p', '', formula
+      ? `x и ${widthName} в нм, u0 в эВ. Поддерживаются ^, exp, sin, cos, sqrt и условия вида x < ${widthName}/2 ? 0.05 : u0.`
+      : 'Одна пара в строке. Первая координата 0, последняя равна ширине. Между точками используется линейная интерполяция.');
+    hint.id = 'profile-hint';
+    input.addEventListener('input', () => {
+      current()[name] = input.value;
+      queueSolve(240);
+    });
+    wrapper.append(label, input, hint);
+    field.append(wrapper);
+  }
+
+  function renderParameters() {
+    const state = current();
+    const container = byId('parameter-fields');
+    const tableWidth = state.preset === 'table';
+    const hasHeight = !tableWidth && (!isWell() || state.preset !== 'rectangular');
+    const keys = ['width', 'mass', isWell() ? 'exterior' : 'energy'];
+    if (hasHeight) keys.splice(2, 0, 'height');
+    const fields = keys.map((key) => {
+      const { min, max, step, unit, name, symbol } = parameters[key];
+      const labelName = key === 'width' ? 'Ширина' : key === 'height' && !isWell() ? 'Высота' : name;
+      const labelSymbol = key === 'width' ? (isWell() ? 'a' : 'h') : symbol;
+      const row = create('div', 'param');
+      const head = create('div', 'param-head');
+      const label = create('label', '', labelName);
+      label.htmlFor = `${key}-number`;
+      label.append(create('span', '', labelSymbol));
+      const numberWrap = create('div', 'number-wrap');
+      const input = create('input');
+      input.type = 'number';
+      input.id = `${key}-number`;
+      input.inputMode = 'decimal';
+      input.min = min;
+      input.max = max;
+      input.step = 'any';
+      input.value = state[key];
+      numberWrap.append(input, create('span', '', unit));
+      head.append(label, numberWrap);
+      const range = create('input');
+      range.type = 'range';
+      range.id = `${key}-range`;
+      range.setAttribute('aria-label', `${labelName} ${labelSymbol}, ${unit}`);
+      range.min = min;
+      range.max = max;
+      range.step = step;
+      range.value = state[key];
+      const fill = () => range.style.setProperty('--fill', `${100 * (Number(range.value) - min) / (max - min)}%`);
+      function set(value) {
+        state[key] = value;
+        range.value = value;
+        fill();
+        if (key === 'width' && tableWidth && state.table == null) byId('table').value = sampleTable(value);
+      }
+      range.addEventListener('input', () => {
+        set(Number(range.value));
+        input.value = range.value;
+        queueSolve(key === 'energy' ? 0 : 42);
+      });
+      range.addEventListener('change', () => queueSolve(0));
+      input.addEventListener('input', () => {
+        const value = input.valueAsNumber;
+        if (Number.isFinite(value) && value >= min && value <= max) {
+          set(value);
+          queueSolve(160);
+        }
+      });
+      input.addEventListener('change', () => {
+        const value = input.valueAsNumber;
+        set(Number.isFinite(value) ? Math.max(min, Math.min(max, value)) : state[key]);
+        input.value = state[key];
+        queueSolve(0);
+      });
+      fill();
+      row.append(head, range);
+      return row;
+    });
+    container.replaceChildren(...fields);
+  }
+
+  function renderControls() {
+    const preset = byId('potential');
+    const standard = create('optgroup');
+    standard.label = 'Готовые профили';
+    for (const [key, label] of presets[mode]) standard.append(new Option(label, key));
+    const custom = create('optgroup');
+    custom.label = 'Свой профиль';
+    custom.append(new Option('Аналитическая функция', 'expression'), new Option('Табличные данные', 'table'));
+    preset.replaceChildren(standard, custom);
+    preset.value = current().preset;
+    const stepValues = isWell() ? [200, 600, 1200] : [100, 280, 700];
+    byId('steps').replaceChildren(...stepValues.map((step) => new Option(String(step), step)));
+    byId('steps').value = current().steps;
+    renderProfileField();
+    renderParameters();
+  }
+
+  function renderViewButtons() {
+    const buttons = options[mode].map(([key, label]) => {
+      const button = create('button', '', label);
+      button.type = 'button';
+      button.dataset.view = key;
+      button.setAttribute('aria-pressed', String(current().view === key));
+      return button;
+    });
+    byId('chart-options').replaceChildren(...buttons);
+  }
+
+  function switchMode(next) {
+    mode = next;
+    selected = null;
+    hover = undefined;
+    document.body.dataset.mode = mode;
+    for (const tab of modeTabs) {
+      const active = tab.dataset.mode === next;
+      tab.setAttribute('aria-selected', String(active));
+      tab.tabIndex = active ? 0 : -1;
+      if (active) byId('experiment').setAttribute('aria-labelledby', tab.id);
+    }
+    byId('well-detail').hidden = !isWell();
+    byId('barrier-detail').hidden = isWell();
+    renderControls();
+    renderViewButtons();
+    queueSolve(0);
+  }
+
+  function queueSolve(delay) {
+    clearTimeout(timer);
+    if (delay) timer = setTimeout(solve, delay);
+    else solve();
+  }
+
+  function solve() {
+    const state = current();
+    const message = byId('plot-message');
+    const table = state.table ?? sampleTable(state.width);
+    const { preset, width, height, mass, exterior, energy, expression, steps } = state;
+    hover = undefined;
+    try {
+      if (isWell()) {
+        const potential = physics.makePotential({ kind: mode, preset, width, height, expression, table });
+        result = { shape: potential, ...physics.solveWell({ width, mass, exterior, potential, steps, maxStates: steps }) };
+        if (selected !== null && selected > result.states.length) selected = null;
+      } else {
+        const key = JSON.stringify([preset, width, height, mass, expression, table, steps]);
+        if (!barrierCache || barrierCache.key !== key) {
+          const potential = physics.makePotential({ kind: mode, preset, width, height, expression, table });
+          barrierCache = { key, potential, energyMax: 0 };
+        }
+        const { potential } = barrierCache;
+        const peak = Math.max(...potential.samples.map((point) => point.value));
+        const desiredMaximum = Math.max(1.6, 1.75 * peak, 1.1 * energy);
+        if (barrierCache.energyMax < desiredMaximum) {
+          const energyMax = Math.ceil(desiredMaximum * 5) / 5;
+          const curve = physics.barrierCurve({ width, mass, potential, steps, energyMax, points: 281 });
+          Object.assign(barrierCache, { energyMax, curve });
+        }
+        result = { ...barrierCache, peak, ...physics.solveBarrier({ width, mass, energy, potential, steps }) };
+      }
+      message.hidden = true;
+    } catch (error) {
+      result = undefined;
+      message.textContent = error.message;
+      message.hidden = false;
+    }
+    if (isWell()) renderStateCards();
+    else renderMetrics();
+    renderChartText();
+    redraw();
+  }
+
+  function renderStateCards() {
+    const count = result?.totalStates;
+    byId('well-count').textContent = count == null ? '' : formatStates(count);
+    const cards = (result?.states ?? []).map(({ index, energy }) => {
+      const card = create('button', 'state');
+      card.type = 'button';
+      card.dataset.state = index;
+      card.style.setProperty('--state', stateColor(index));
+      card.setAttribute('aria-label', `Уровень ${index}, ${fixed(energy, 5)} эВ`);
+      card.setAttribute('aria-pressed', String(selected === index));
+      card.append(create('span', '', `E${subscript(index)}`), create('strong', '', fixed(energy, 5)), create('small', '', 'эВ'));
+      return card;
+    });
+    byId('state-cards').replaceChildren(...cards);
+  }
+
+  function renderMetrics() {
+    byId('transmission').textContent = result ? percent(result.transmission, result.logTransmission) : '—';
+    byId('reflection').textContent = result ? percent(result.reflection) : '—';
+    byId('current-energy').textContent = `${number(current().energy)} эВ`;
+  }
+
+  function visibleStates() {
+    if (!result) return [];
+    return selected === null ? result.states.slice(0, palette.length) : result.states.filter(({ index }) => index === selected);
+  }
+
+  function legend(target, items) {
+    byId(target).replaceChildren(...items.map(([label, color, dashed]) => {
+      const node = create('span', `legend-item${dashed ? ' dashed' : ''}`);
+      const line = create('i');
+      line.setAttribute('aria-hidden', 'true');
+      line.style.setProperty('--legend', color);
+      node.append(line, create('span', '', label));
+      return node;
+    }));
+  }
+
+  function renderChartText() {
+    const state = current();
+    const title = byId('chart-title');
+    const subtitle = byId('chart-subtitle');
+    const foot = byId('chart-foot');
+    if (isWell()) {
+      const wave = state.view === 'wave';
+      const states = visibleStates();
+      title.textContent = wave ? 'Нормированные волновые функции' : 'Спектр связанных состояний';
+      subtitle.textContent = wave ? 'Амплитуда ψₙ(x) в нм⁻¹ᐟ²' : 'Потенциал U(x), уровни Eₙ и функции ψₙ(x)';
+      const items = wave ? [] : [['U(x)', colors.potential], ['U вне ямы', colors.limit, true]];
+      items.push(...states.map(({ index }) => [`ψ${subscript(index)}(x)`, stateColor(index)]));
+      legend('chart-legend', items);
+      const description = wave ? 'За границами ямы показан участок затухающих хвостов.' : 'Функции ψₙ масштабированы и смещены на уровни Eₙ.';
+      const selection = result?.states.length > palette.length && selected === null ? ' Показаны первые шесть функций.' : '';
+      foot.textContent = result?.states.length ? `${description}${selection} Выберите уровень под графиком.`
+        : result ? 'При этих параметрах связанных состояний нет.' : '';
+    } else {
+      title.textContent = 'Коэффициент прохождения';
+      subtitle.textContent = 'Частица падает на барьер слева';
+      legend('chart-legend', [['T(E)', colors.passage], ['Текущая энергия', colors.energy, true]]);
+      legend('profile-legend', [['U(x)', colors.potential], ['Энергия E', colors.energy, true]]);
+      foot.textContent = result ? `Максимум профиля ≈ ${number(result.peak)} эВ · T + R = ${fixed(result.transmission + result.reflection, 6)}` : '';
+    }
+    mainPlot.setAttribute('aria-label', `${title.textContent}. ${subtitle.textContent}`);
+  }
+
+  function surface(canvas) {
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+    if (!width || !height) return null;
+    const ratio = Math.min(2, window.devicePixelRatio || 1);
+    const pixelWidth = Math.round(width * ratio);
+    const pixelHeight = Math.round(height * ratio);
+    if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+      canvas.width = pixelWidth;
+      canvas.height = pixelHeight;
+    }
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    ctx.clearRect(0, 0, width, height);
+    return { ctx, width, height };
+  }
+
+  function ticks(min, max, target) {
+    const interval = (max - min) / target;
+    const unit = 10 ** Math.floor(Math.log10(interval));
+    const multiple = [1, 2, 2.5, 5, 10].find((value) => value >= interval / unit - 1e-8);
+    const step = unit * multiple;
+    const first = Math.ceil(min / step - 1e-8);
+    const last = Math.floor(max / step + 1e-8);
+    return Array.from({ length: Math.max(0, last - first + 1) }, (_, i) => (first + i) * step);
+  }
+
+  function axisNumber(value) {
+    if (value === 0 || (Math.abs(value) >= .001 && Math.abs(value) < 10000)) return number(value);
+    return value.toExponential(0).replace('e+', 'e').replace('-', '−');
+  }
+
+  function axes(canvas, { xmin, xmax, ymin, ymax, xlabel, ylabel, yTicks, formatY = axisNumber }) {
+    const view = surface(canvas);
+    if (!view) return null;
+    const { ctx, width, height } = view;
+    const narrow = width < 440;
+    const left = narrow ? 52 : 64;
+    const top = 40;
+    const right = width - (narrow ? 16 : 24);
+    const bottom = height - 44;
+    const x = (value) => left + (right - left) * (value - xmin) / (xmax - xmin);
+    const y = (value) => bottom - (bottom - top) * (value - ymin) / (ymax - ymin);
+    const toX = (pixel) => xmin + (xmax - xmin) * (pixel - left) / (right - left);
+    ctx.font = `${narrow ? 11 : 12}px ${mono}`;
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = colors.text;
+    ctx.strokeStyle = colors.grid;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (const value of ticks(xmin, xmax, narrow ? 4 : 8)) {
+      const px = x(value);
+      ctx.moveTo(px, top);
+      ctx.lineTo(px, bottom);
+      ctx.textAlign = 'center';
+      ctx.fillText(axisNumber(value), px, bottom + 16);
+    }
+    for (const value of yTicks ?? ticks(ymin, ymax, 6)) {
+      const py = y(value);
+      ctx.moveTo(left, py);
+      ctx.lineTo(right, py);
+      ctx.textAlign = 'right';
+      ctx.fillText(formatY(value), left - 8, py);
+    }
+    ctx.stroke();
+    ctx.strokeStyle = colors.zero;
+    ctx.beginPath();
+    ctx.moveTo(left, top);
+    ctx.lineTo(left, bottom);
+    ctx.lineTo(right, bottom);
+    ctx.stroke();
+    ctx.textAlign = 'left';
+    ctx.fillText(ylabel, 12, 20);
+    ctx.textAlign = 'right';
+    ctx.fillText(xlabel, right, height - 12);
+    return { ctx, width, height, x, y, toX, left, right, top, bottom };
+  }
+
+  function clipPlot(plot, draw) {
+    const { ctx, left, top, right, bottom } = plot;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(left, top, right - left, bottom - top);
+    ctx.clip();
+    draw();
+    ctx.restore();
+  }
+
+  function line(plot, x1, y1, x2, y2, color, dash = []) {
+    const { ctx } = plot;
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = color;
+    ctx.setLineDash(dash);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  function trace(plot, count, point, color, { width = 2, fill } = {}) {
+    const { ctx, x, y, bottom } = plot;
+    if (!count) return;
+    ctx.beginPath();
+    let first;
+    let last;
+    for (let i = 0; i < count; i++) {
+      const [px, py] = point(i);
+      if (i === 0) {
+        first = x(px);
+        ctx.moveTo(first, y(py));
+      } else {
+        ctx.lineTo(x(px), y(py));
+      }
+      last = x(px);
+    }
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    if (fill) {
+      ctx.lineTo(last, bottom);
+      ctx.lineTo(first, bottom);
+      ctx.closePath();
+      ctx.fillStyle = `${color}${fill}`;
+      ctx.fill();
+    }
+  }
+
+  function domainBoundaries(plot, width, edge) {
+    const { ctx, x, top, bottom } = plot;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = colors.text;
+    for (const [position, label] of [[0, 'x = 0'], [width, `x = ${edge}`]]) {
+      const px = x(position);
+      line(plot, px, top, px, bottom, colors.zero, [3, 4]);
+      ctx.fillText(label, px, 20);
+    }
+  }
+
+  function potentialTrace(plot, samples, width, outside, color) {
+    const pad = .30 * width;
+    const points = [{ x: -pad, value: outside }, { x: 0, value: outside }, ...samples,
+      { x: width, value: outside }, { x: width + pad, value: outside }];
+    trace(plot, points.length, (i) => [points[i].x, points[i].value], color, { fill: '0e' });
+  }
+
+  function drawWell() {
+    const { width, exterior, view } = current();
+    const states = visibleStates();
+    const wave = view === 'wave';
+    let amplitude = 0;
+    for (const state of states) {
+      for (const value of state.psi) amplitude = Math.max(amplitude, Math.abs(value));
+    }
+    const sampleValues = result.shape.samples.map(({ value }) => value);
+    let minimum = Math.min(exterior, ...sampleValues, ...result.states.map(({ energy }) => energy));
+    let maximum = Math.max(exterior, ...sampleValues);
+    const spread = Math.max(maximum - minimum, .05);
+    const scale = .096 * spread / (amplitude || 1);
+    if (wave) {
+      minimum = -(amplitude || 1) * 1.12;
+      maximum = -minimum;
+    } else {
+      minimum -= .11 * spread;
+      maximum += .16 * spread;
+    }
+    const plot = axes(mainPlot, { xmin: -.30 * width, xmax: 1.30 * width, ymin: minimum, ymax: maximum,
+      xlabel: 'x, нм', ylabel: wave ? 'ψ, нм⁻¹ᐟ²' : 'E, U, эВ' });
+    if (!plot) return;
+    const { x, y, ctx, top, left, right } = plot;
+    domainBoundaries(plot, width, 'a');
+    clipPlot(plot, () => {
+      if (wave) {
+        line(plot, left, y(0), right, y(0), colors.zero);
+      } else {
+        ctx.fillStyle = '#6a746c0d';
+        ctx.fillRect(left, top, right - left, y(exterior) - top);
+        line(plot, left, y(exterior), right, y(exterior), colors.limit, [5, 5]);
+        potentialTrace(plot, result.shape.samples, width, exterior, colors.potential);
+      }
+      for (const state of states) {
+        const color = stateColor(state.index);
+        if (!wave) line(plot, x(0), y(state.energy), x(width), y(state.energy), `${color}57`, [4, 5]);
+        trace(plot, state.psi.length, (i) => [result.x[i], wave ? state.psi[i] : state.energy + scale * state.psi[i]], color,
+          { width: selected === null ? 1.75 : 2.5 });
+      }
+    });
+  }
+
+  function marker(plot, x, y, color, active = true) {
+    const { ctx } = plot;
+    ctx.fillStyle = colors.sheet;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, active ? 5.5 : 3.5, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  function drawBarrier() {
+    const { energy, view } = current();
+    const log = view === 'log';
+    const bottomLog = Math.min(-1, ...result.curve.slice(1).map((point) => point.logTransmission / Math.LN10), result.logTransmission / Math.LN10);
+    const ymin = log ? Math.floor(bottomLog) : 0;
+    const ymax = log ? 0 : 1;
+    const ordinate = (point) => log ? Math.max(ymin, point.logTransmission / Math.LN10) : point.transmission;
+    const labels = log ? { yTicks: ticks(ymin, 0, 5).filter(Number.isInteger),
+      formatY: (value) => value ? `10${String(value).replace(/[\d-]/g, (n) => n === '-' ? '⁻' : '⁰¹²³⁴⁵⁶⁷⁸⁹'[n])}` : '1' } : {};
+    const plot = axes(mainPlot, { xmin: 0, xmax: result.energyMax, ymin, ymax, xlabel: 'E, эВ', ylabel: 'T', ...labels });
+    if (!plot) return;
+    activeAxes = plot;
+    const { x, y, top, bottom } = plot;
+    clipPlot(plot, () => {
+      trace(plot, result.curve.length, (i) => [result.curve[i].energy, ordinate(result.curve[i])], colors.passage,
+        { width: 2.5, fill: '10' });
+      line(plot, x(energy), top, x(energy), bottom, colors.energy, [4, 5]);
+      marker(plot, x(energy), y(ordinate(result)), colors.energy);
+      if (hover) {
+        line(plot, x(hover.point.energy), top, x(hover.point.energy), bottom, colors.zero, [2, 4]);
+        marker(plot, x(hover.point.energy), y(ordinate(hover.point)), colors.passage, false);
+      }
+    });
+  }
+
+  function drawBarrierProfile() {
+    const { width, energy } = current();
+    const plot = axes(profilePlot, { xmin: -.30 * width, xmax: 1.30 * width, ymin: 0,
+      ymax: 1.18 * Math.max(energy, result.peak), xlabel: 'x, нм', ylabel: 'E, U, эВ' });
+    if (!plot) return;
+    domainBoundaries(plot, width, 'h');
+    clipPlot(plot, () => {
+      potentialTrace(plot, result.potential.samples, width, 0, colors.potential);
+      line(plot, plot.left, plot.y(energy), plot.right, plot.y(energy), colors.energy, [5, 5]);
+    });
+  }
+
+  function redraw() {
+    activeAxes = undefined;
+    if (!hover) tooltip.hidden = true;
+    if (!result) {
+      surface(mainPlot);
+      surface(profilePlot);
+    } else if (isWell()) {
+      drawWell();
+    } else {
+      drawBarrier();
+      drawBarrierProfile();
+    }
+  }
+
+  for (const tab of modeTabs) {
+    tab.addEventListener('click', () => switchMode(tab.dataset.mode));
+    tab.addEventListener('keydown', (event) => {
+      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+      event.preventDefault();
+      const index = event.key === 'Home' ? 0 : event.key === 'End' ? 1 : 1 - modeTabs.indexOf(tab);
+      modeTabs[index].focus();
+      switchMode(modeTabs[index].dataset.mode);
+    });
+  }
+  byId('potential').addEventListener('change', (event) => {
+    current().preset = event.target.value;
+    renderProfileField();
+    renderParameters();
+    queueSolve(0);
+  });
+  byId('steps').addEventListener('change', (event) => {
+    current().steps = Number(event.target.value);
+    queueSolve(0);
+  });
+  byId('reset').addEventListener('click', () => {
+    config[mode] = { ...defaults[mode] };
+    if (!isWell()) barrierCache = undefined;
+    switchMode(mode);
+  });
+  byId('chart-options').addEventListener('click', (event) => {
+    const button = event.target.closest('button[data-view]');
+    if (!button) return;
+    current().view = button.dataset.view;
+    for (const option of byId('chart-options').children) option.setAttribute('aria-pressed', String(option === button));
+    hover = undefined;
+    renderChartText();
+    redraw();
+  });
+  byId('state-cards').addEventListener('click', (event) => {
+    const button = event.target.closest('button[data-state]');
+    if (!button) return;
+    const index = Number(button.dataset.state);
+    selected = selected === index ? null : index;
+    for (const card of byId('state-cards').children) card.setAttribute('aria-pressed', String(Number(card.dataset.state) === selected));
+    renderChartText();
+    redraw();
+  });
+  mainPlot.addEventListener('pointermove', (event) => {
+    if (!activeAxes || !result?.curve || event.pointerType === 'touch') return;
+    const { left, right, top, bottom, toX } = activeAxes;
+    const px = event.offsetX;
+    const py = event.offsetY;
+    if (px < left || px > right || py < top || py > bottom) {
+      if (hover) {
+        hover = undefined;
+        redraw();
+      }
+      return;
+    }
+    const index = Math.round((result.curve.length - 1) * toX(px) / result.energyMax);
+    const point = result.curve[Math.min(result.curve.length - 1, Math.max(0, index))];
+    hover = { point };
+    drawBarrier();
+    tooltip.textContent = `E  ${fixed(point.energy, 3)} эВ\nT  ${percent(point.transmission, point.logTransmission)}`;
+    tooltip.hidden = false;
+    tooltip.style.left = `${Math.min(mainPlot.clientWidth - tooltip.offsetWidth - 4, px + 13)}px`;
+    tooltip.style.top = `${Math.max(3, py - tooltip.offsetHeight - 10)}px`;
+  });
+  mainPlot.addEventListener('pointerleave', () => {
+    if (!hover) return;
+    hover = undefined;
+    redraw();
+  });
+  const resize = new ResizeObserver(() => {
+    hover = undefined;
+    redraw();
+  });
+  resize.observe(mainPlot);
+  switchMode('well');
+})();
+
+</script>
+</body>
+</html>
